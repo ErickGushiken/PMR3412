@@ -1,0 +1,182 @@
+<!-- Aluno: Erick Gushiken -->
+
+<!DOCTYPE html>
+<html style="background:lightgray; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;">
+   <meta charset = "utf-8" />
+   <title>Chat do PMR3412</title>
+
+<style>
+.inputbox{
+  display:flex;
+  margin-top:0.5em;
+}
+.inputbox input{
+  flex-grow:1;
+}
+
+#list_message {
+  border: 1px solid grey;
+  min-height: 100px;
+  height: 50%;
+  width: 40%;
+  margin-left: 50%;
+  margin-right: 10%;
+}
+</style>
+
+<script language = "javascript" type="text/javascript">
+
+
+
+
+   var websocket = new WebSocket("ws://localhost:5000");
+   initWebSocket();
+   var userId = Math.floor((Math.random()*10));
+   var username;
+
+   
+   function tempAlert(msg,duration){
+    var el = document.createElement("div");
+    el.setAttribute("style","position:absolute;top:5px;width:90%,right:5%;background-color:red;color:white");
+    el.innerHTML = msg;
+    setTimeout(function(){
+      el.parentNode.removeChild(el);
+    },duration);
+    document.body.appendChild(el);
+  }
+
+   function initWebSocket(webSocket){
+    websocket.onopen = function(ev){
+      welcome(ev);
+    };
+    websocket.onmessage = function(ev){
+      message = JSON.parse(ev.data);
+      if (message.type === 'user_exist'){
+        tempAlert("Esse usuário já existe, escolha outro nome",5000);
+      }
+      if (message.type === 'new_user' && message.userId === userId){
+        window.document.getElementById("signup").style.display = "none";
+        window.document.getElementById('username_zone').style.display = "block";
+        window.document.getElementById('message').style.display = "block";
+        window.document.getElementById('send_message').style.display = "block";
+        window.document.getElementById('user_list').style.display = "block";
+        window.document.getElementById('list_message').style.display = "block";
+        window.document.getElementById('username').innerHTML = message.user;
+        var span = document.createElement("span");
+        var br = document.createElement("br");
+        span.innerHTML =  `Seja bem vindo, agora você é um participante do chat.`;
+        window.document.getElementById('list_message').appendChild(span);
+        window.document.getElementById('list_message').appendChild(br);
+      }
+      if (message.type === 'new_user' && message.userId !== userId){
+        var span = document.createElement("span");
+        var br = document.createElement("br");
+        span.innerHTML = `${message.user} joined the chat.`;
+        window.document.getElementById('list_message').appendChild(span);
+        window.document.getElementById('list_message').appendChild(br);
+      }
+      if (message.type === 'message' && message.userId !== userId){
+        var span = document.createElement("span");
+        var br = document.createElement("br");
+        var sender = message.user;
+
+        span.innerHTML = `${sender}: ${message.message}`;
+        window.document.getElementById('list_message').appendChild(span);
+        window.document.getElementById('list_message').appendChild(br);
+      }
+      if (message.type === 'users'){
+        window.document.getElementById('users').innerHTML = '';
+        var users = message.message;
+        users.forEach(addUser);
+      }
+    }
+   }
+
+   function addUser(user, index, array) {
+    var item = document.createElement("li");
+    item.innerHTML = user;
+    window.document.getElementById('users').appendChild(item);
+   }
+
+   function change_name(){
+     username = window.document.getElementById("username_input").value;
+     var message = {
+       "type": "create_name",
+       "user": username,
+       "userId": userId
+     };
+     sendToSocket(message);
+   }
+
+   function welcome(ev){
+    tempAlert("Seja Bem vindo, utilize o campo para inserir um nome e se cadastrar",4000)
+   }
+
+   function send_message(){
+    var text = window.document.getElementById("message").value;
+    var message = {
+       "type": "message",
+       "user": username,
+       "userId": userId,
+       "message": text
+     };
+    var span = document.createElement("span");
+    var br = document.createElement("br");
+    span.innerHTML = `Você: ${message.message}`;
+    window.document.getElementById('list_message').appendChild(span);
+    window.document.getElementById('list_message').appendChild(br);
+    sendToSocket(message);
+   }
+
+   function sendToSocket(message){
+     if(websocket.readyState === websocket.OPEN){
+      return websocket.send(JSON.stringify(message));
+     }
+     else{
+       websocket = new WebSocket("ws://localhost:5000");
+       initWebSocket(websocket);
+       websocket.send(JSON.stringify(message));
+     }
+   }
+
+
+</script>
+
+<h1 style="text-align: center;color:purple; font-family:fantasy,roboto,arial;">Chat do PMR3412</h1>
+<div id="signup">
+  <span>Crie um nome para iniciar</span>
+  <input id="username_input" />
+  <button onclick="change_name()">OK</button>
+</div>
+<div id="username_zone" style="display: none;">
+  <span>Logado como:</span>
+  <span id="username"></span>
+  <br>
+  <span>Para enviar uma mensagem privada digite: "*pvt" + nome do usuário remetente + "@" + sua mensagem</span>
+  <br>
+  <span>Ex: "*pvtmari@Quero sopa", será enviado a mensagem Quero sopa para a remetente Mari</span>
+  <br>
+  <br>
+  <br>
+  <br>
+</div>
+<div id="chat" style="display: flex; flex-direction: row;">
+  <div id="user_list" style="display: none;width: 50%;left: 0;margin: 0;">
+    <br>
+    <span>Usuários Logados</span>
+    <ul id="users">
+    </ul>
+    <br>
+  </div>
+  <div style="display:flex; flex-direction: column;">
+    <div id="list_message" style="display: none;width: max-content;margin: 0;min-height: 500px;max-height: 100%;overflow-y: scroll;">
+    </div>
+    <div class="inputbox">
+      <input type="text" id="message" onkeypress="if(event.key === 'Enter') send_message()" style="display: none;" />
+      <button type="submit" onclick="send_message()" id="send_message" style="display: none;">Send</button>      
+    </div>
+
+  </div>
+</div>
+
+</html>
